@@ -1,17 +1,17 @@
-import React, { Children } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
-import Toaster from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
-const ProtecedRoute = ({Children}) =>{
+const ProtectedRoute = ({ children }) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = localStorage.getItem("token");
 
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = localStorage.getItem("token");
+  if (!user || !token) {
+    toast.error('You need to login first');
+    return <Navigate to="/login" replace />;
+  }
 
-    if(!user || !token ){
-        Toaster.error('You need to login first');
-        return <Navigate to="/login" replace />;
-    }
-    return Children
-}
+  return children;
+};
 
-export default ProtecedRoute;
+export default ProtectedRoute;
