@@ -1,48 +1,55 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import {
-  Button,
-  TextField,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Typography,
-  CircularProgress
-} from "@mui/material";
-import SortIcon from "@mui/icons-material/Sort";
+import { fetchCryptoData } from "../api";
 
 const Home = () => {
   const [cryptoData, setCryptoData] = useState([]);
   const [allData, setAllData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [search, setSearch] = useState("");
 
-  const fetchCryptoData = async () => {
+  const [searchSymbol, setSearchSymbol] = useState("");
+  const [searchName, setSearchName] = useState("");
+  const [searchPrice, setSearchPrice] = useState("");
+
+  const [sortKey, setSortKey] = useState("price");
+  const [sortDirection, setSortDirection] = useState("asc");
+
+  const sortData = (key, direction, data) => {
+    return [...data].sort((a, b) => {
+      let valA, valB;
+
+      if (key === "price") {
+        valA = a.metrics.market_data.price_usd;
+        valB = b.metrics.market_data.price_usd;
+      } else if (key === "name") {
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+      } else if (key === "symbol") {
+        valA = a.symbol.toLowerCase();
+        valB = b.symbol.toLowerCase();
+      }
+
+      if (valA < valB) return direction === "asc" ? -1 : 1;
+      if (valA > valB) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const handleSort = (key) => {
+    const newDirection = sortKey === key && sortDirection === "asc" ? "desc" : "asc";
+    setSortKey(key);
+    setSortDirection(newDirection);
+
+    const sorted = sortData(key, newDirection, [...cryptoData]);
+    setCryptoData(sorted);
+  };
+
+  const loadCryptoData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `https://data.messari.io/api/v2/assets?fields=id,symbol,name,metrics/market_data/price_usd&page=${page}&limit=10`
-      );
-      console.log("🚀 ~ fetchCryptoData ~ response:", response)
-      
-
-      const newData = response.data.data;
-
+      const newData = await fetchCryptoData(page);
       const combined = [...allData, ...newData];
-
-      const sortedData = combined.sort((a, b) =>
-        sortOrder === "asc"
-          ? a.metrics.market_data.price_usd - b.metrics.market_data.price_usd
-          : b.metrics.market_data.price_usd - a.metrics.market_data.price_usd
-      );
+      const sortedData = sortData(sortKey, sortDirection, combined);
 
       setAllData(sortedData);
       setCryptoData(sortedData);
@@ -54,82 +61,48 @@ const Home = () => {
   };
 
   useEffect(() => {
-    fetchCryptoData();
+    loadCryptoData();
   }, [page]);
 
   useEffect(() => {
     const handleScroll = () => {
-      const bottomReached =
-        window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
-      if (bottomReached && !loading) {
+      if (
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 200 &&
+        !loading
+      ) {
         setPage((prev) => prev + 1);
       }
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [loading]);
 
-  const toggleSortOrder = () => {
-    const newOrder = sortOrder === "asc" ? "desc" : "asc";
-    setSortOrder(newOrder);
+  useEffect(() => {
+    const filteredData = allData.filter((data) => {
+      const symbolMatch = data.symbol.toLowerCase().includes(searchSymbol.toLowerCase());
+      const nameMatch = data.name.toLowerCase().includes(searchName.toLowerCase());
 
-    const sorted = [...allData].sort((a, b) =>
-      newOrder === "asc"
-        ? a.metrics.market_data.price_usd - b.metrics.market_data.price_usd
-        : b.metrics.market_data.price_usd - a.metrics.market_data.price_usd
-    );
+      const price = data.metrics.market_data.price_usd;
+      const priceStr = price.toString();
+      const decimalPart = price.toFixed(6).split(".")[1].slice(0, 3);
+      const priceMatch = priceStr.includes(searchPrice) || decimalPart.includes(searchPrice);
 
-    setAllData(sorted);
-    setCryptoData(sorted);
-  };
+      return symbolMatch && nameMatch && priceMatch;
+    });
 
-  const handleLoadmore = () => {
+    const sortedFiltered = sortData(sortKey, sortDirection, filteredData);
+    setCryptoData(sortedFiltered);
+  }, [searchSymbol, searchName, searchPrice, sortKey, sortDirection, allData]);
+
+  const handleLoadMore = () => {
     if (!loading) {
       setPage((prev) => prev + 1);
     }
   };
 
-  const handleSearch = (event) => {
-    const value = event.target.value;
-    setSearch(value);
-
-    const filtered = allData.filter((item) =>
-      item.symbol.toLowerCase().includes(value.toLowerCase()) ||
-      item.name.toLowerCase().includes(value.toLowerCase())
-    );
-    setCryptoData(filtered);
-  };
-
   return (
     <div className="container mt-4">
       <h2 className="text-center mb-4">Crypto Exchange</h2>
-
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <button
-          className="btn btn-secondary d-flex align-items-center gap-2"
-          onClick={toggleSortOrder}
-        >
-          Sort
-          <img
-          src={sortOrder === "asc" ? "/sort-ascending.png" : "/sort-decending.png"}
-          alt="Sort Icon"
-          width={20}
-          height={20}
-        />
-
-        </button>
-
-        <form className="d-flex align-items-center" onSubmit={(e) => e.preventDefault()}>
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search by symbol or name..."
-            value={search}
-            onChange={handleSearch}
-          />
-        </form>
-      </div>
 
       {loading && cryptoData.length === 0 ? (
         <p className="text-center">Loading...</p>
@@ -139,9 +112,84 @@ const Home = () => {
             <table className="table table-striped table-bordered">
               <thead className="table-light">
                 <tr>
-                  <th>Symbol</th>
-                  <th>Name</th>
-                  <th>Price (USD)</th>
+                  <th>
+                    <button
+                      className="btn btn-secondary btn-sm d-flex align-items-center gap-2 mb-1"
+                      onClick={() => handleSort("symbol")}
+                    >
+                      Sort
+                      <img
+                        src={
+                          sortKey === "symbol" && sortDirection === "asc"
+                            ? "/sort-ascending.png"
+                            : "/sort-decending.png"
+                        }
+                        alt="Sort Icon"
+                        width={20}
+                        height={20}
+                      />
+                    </button>
+                    Symbol
+                    <input
+                      type="text"
+                      className="form-control mt-1"
+                      placeholder="Search Symbol"
+                      value={searchSymbol}
+                      onChange={(e) => setSearchSymbol(e.target.value)}
+                    />
+                  </th>
+                  <th>
+                    <button
+                      className="btn btn-secondary btn-sm d-flex align-items-center gap-2 mb-1"
+                      onClick={() => handleSort("name")}
+                    >
+                      Sort
+                      <img
+                        src={
+                          sortKey === "name" && sortDirection === "asc"
+                            ? "/sort-ascending.png"
+                            : "/sort-decending.png"
+                        }
+                        alt="Sort Icon"
+                        width={20}
+                        height={20}
+                      />
+                    </button>
+                    Name
+                    <input
+                      type="text"
+                      className="form-control mt-1"
+                      placeholder="Search Name"
+                      value={searchName}
+                      onChange={(e) => setSearchName(e.target.value)}
+                    />
+                  </th>
+                  <th>
+                    <button
+                      className="btn btn-secondary btn-sm d-flex align-items-center gap-2 mb-1"
+                      onClick={() => handleSort("price")}
+                    >
+                      Sort
+                      <img
+                        src={
+                          sortKey === "price" && sortDirection === "asc"
+                            ? "/sort-ascending.png"
+                            : "/sort-decending.png"
+                        }
+                        alt="Sort Icon"
+                        width={20}
+                        height={20}
+                      />
+                    </button>
+                    Price (USD)
+                    <input
+                      type="text"
+                      className="form-control mt-1"
+                      placeholder="Search Price"
+                      value={searchPrice}
+                      onChange={(e) => setSearchPrice(e.target.value)}
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -149,10 +197,7 @@ const Home = () => {
                   <tr key={crypto.id}>
                     <td>{crypto.symbol}</td>
                     <td>{crypto.name}</td>
-                    <td>
-                      $
-                      {crypto.metrics.market_data.price_usd.toLocaleString()}
-                    </td>
+                    <td>${crypto.metrics.market_data.price_usd.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -160,23 +205,20 @@ const Home = () => {
           </div>
 
           <div className="row mt-3 align-items-center">
-          <div className="col text-start"></div>
-
-          <div className="col text-center">
-            {loading && <span className="text-muted">Loading...</span>}
+            <div className="col text-start" />
+            <div className="col text-center">
+              {loading ?    <span className="text-muted">Loading...</span>  : <p> Scroll Down To Load More </p> }
+            </div>
+            <div className="col text-center">
+              {/* <button
+                className="btn btn-primary"
+                onClick={handleLoadMore}
+                disabled={loading}
+              >
+                Load More
+              </button> */}
+            </div>
           </div>
-
-          <div className="col text-end">
-            <button
-              className="btn btn-primary"
-              onClick={handleLoadmore}
-              disabled={loading}
-            >
-              Load More
-            </button>
-          </div>
-        </div>
-
         </>
       )}
     </div>

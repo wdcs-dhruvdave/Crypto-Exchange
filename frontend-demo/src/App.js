@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import CryptoExchange from './pages/CryptoExchange';
 import Home from './pages/Home';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<h1>About Page</h1>} />
           <Route path="/contact" element={<h1>Contact Page</h1>} />
+          <Route path="/exchange" element={<ProtectedRoute><CryptoExchange></CryptoExchange></ProtectedRoute>} />
           <Route path="*" element={<h1>404 Not Found</h1>} />
         </Routes>
       </main>
