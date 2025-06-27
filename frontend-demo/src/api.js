@@ -23,7 +23,7 @@ export const fetchCryptoData = async (page = 1) => {
   }
 };
 
-export const fetchCryptoDataforExchnage = async (id) =>{
+export const fetchCryptoDataforExchnage = async () =>{
   try{
     const response = await Crypto_Api.get(
     `assets?fields=symbol,name,metrics/market_data/price_usd&filter=symbol:btc`//&page=1&limit=10

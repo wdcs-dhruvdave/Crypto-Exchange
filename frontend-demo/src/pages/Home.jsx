@@ -94,11 +94,11 @@ const Home = () => {
     setCryptoData(sortedFiltered);
   }, [searchSymbol, searchName, searchPrice, sortKey, sortDirection, allData]);
 
-  const handleLoadMore = () => {
-    if (!loading) {
-      setPage((prev) => prev + 1);
-    }
-  };
+  // const handleLoadMore = () => {
+  //   if (!loading) {
+  //     setPage((prev) => prev + 1);
+  //   }
+  // };
 
   return (
     <div className="container mt-4">
