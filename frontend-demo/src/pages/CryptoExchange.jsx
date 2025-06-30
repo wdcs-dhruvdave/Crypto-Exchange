@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { fetchCryptoDataforExchnage } from "../api";
 import Select from "react-select";
 import toast from "react-hot-toast";
@@ -15,8 +15,7 @@ const CryptoExchange = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = useCallback(async() => {
       try {
         setLoading(true);
         const data = await fetchCryptoDataforExchnage(["btc", "eth", "usdt"]);
@@ -27,9 +26,11 @@ const CryptoExchange = () => {
       } finally {
         setLoading(false);
       }
-    };
-    fetchData();
-  }, []);
+    }, []);
+
+  useEffect(() => {
+  fetchData();
+  }, [fetchData]);
 
   const handleCurrencyChange = (e) => {
     const newAmount = parseFloat(e.target.value);
